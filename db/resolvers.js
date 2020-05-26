@@ -1,6 +1,8 @@
 const Usuario = require('../models/Usuarios');
 const Producto = require('../models/Producto');
 const Cliente = require('../models/Clientes');
+const Pedido = require('../models/Pedidos');
+
 
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
