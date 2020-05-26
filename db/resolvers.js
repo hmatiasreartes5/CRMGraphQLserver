@@ -1,5 +1,6 @@
 const Usuario = require('../models/Usuarios');
 const Producto = require('../models/Producto');
+const Cliente = require('../models/Clientes');
 
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -36,6 +37,39 @@ const resolvers = {
                 }
 
                 return producto;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        obtenerClientes: async() => {
+            try {
+                const clientes = await Cliente.find({});
+                return clientes;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        obtenerClientesVendedor: async(_,{},ctx) => {
+            try {
+                const clientes = await Cliente.find({vendedor: ctx.usuario.id.toString()});
+                return clientes;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        obtenerCliente : async(_,{id},ctx) => {
+            try {
+                //verifico si el cliente existe
+                const cliente = await Cliente.findById(id);
+                if(!cliente){
+                    throw new Error('Ese cliente no existe');
+                }
+
+                //Me aseguro que solo el usuario correspondiente pueda ver sus cliente
+                if(cliente.vendedor.toString() !== ctx.usuario.id){
+                    throw new Error('No tienes los permisos para esta accion');
+                }
+                return cliente;
             } catch (error) {
                 console.log(error);
             }
@@ -129,6 +163,69 @@ const resolvers = {
                 return "Producto Eliminado"
             } catch (error) {
                 console.log(error);         
+            }
+        },
+        nuevoCliente: async(_,{input},ctx) => {
+            const {email}= input;
+            console.log(ctx);
+            
+            //Verificar si el cliente ya existe
+            const cliente = await Cliente.findOne({email});
+            if(cliente){
+                throw new Error('Ese cliente ya existe');
+            }
+
+            const nuevoCliente = new Cliente(input);
+            //asignar el vendedor
+            nuevoCliente.vendedor = ctx.usuario.id;
+
+            //guardamos en la DB
+            try {
+                await nuevoCliente.save();
+                return nuevoCliente;
+            } catch (error) {
+                console.log(error);
+            }
+
+        },
+        actualizarCliente: async(_,{id, input},ctx) => {
+            try {
+                //verifico que el cliente exista
+                let cliente = await Cliente.findById(id);
+                if(!cliente){
+                    throw new Error('Ese cliente no existe');
+                }
+
+                //verifico que el cliente pertenezca al usuario logueado
+                if(cliente.vendedor.toString() !== ctx.usuario.id){
+                    throw new Error('No tienes los permisos para esta accion');
+                }
+
+                //actualizamos los datos
+                cliente = await Cliente.findOneAndUpdate({_id: id},input,{new: true});
+                return cliente;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        eliminarCliente: async(_,{id},ctx)=> {
+            try {
+                //verifico que el cliente exista
+                let cliente = await Cliente.findById(id);
+                if(!cliente){
+                    throw new Error('Ese cliente no existe');
+                }
+
+                //verifico que el cliente pertenezca al usuario logueado
+                if(cliente.vendedor.toString() !== ctx.usuario.id){
+                    throw new Error('No tienes los permisos para esta accion');
+                }
+
+                //elimino el cliente de la DB
+                await Cliente.findOneAndDelete({_id: id});
+                return "Cliente Eliminado";
+            } catch (error) {
+                console.log(error);
             }
         }
     }
